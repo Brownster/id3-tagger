@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -76,6 +77,18 @@ Examples:
         action='store_true',
         help='Show what would be done without making any changes'
     )
+
+    parser.add_argument(
+        '--genre',
+        type=str,
+        help='Override default genre to add to files'
+    )
+
+    parser.add_argument(
+        '--year',
+        type=str,
+        help='Override default year to add to files'
+    )
     
     return parser.parse_args()
 
@@ -147,6 +160,10 @@ def main():
             config_updates['api_cache_dir'] = args.cache_dir
         if args.verbose:
             config_updates['verbose'] = True
+        if args.genre:
+            config_updates['default_genre'] = args.genre
+        if args.year:
+            config_updates['default_year'] = args.year
         
         if config_updates:
             if not config.update_from_dict(config_updates):
@@ -161,13 +178,15 @@ def main():
         # Initialize components
         logger = ProcessingLogger(verbose=config.verbose)
         scanner = FileScanner()
-        processor = ID3Processor(config)
+        processor = ID3Processor(config, dry_run=args.dry_run)
         
         # Initialize API components if enabled
         metadata_extractor = MetadataExtractor()
         audiodb_client = None
         if config.use_api:
-            cache_dir = Path(config.api_cache_dir) if config.api_cache_dir else None
+            cache_dir = None
+            if isinstance(config.api_cache_dir, (str, bytes, os.PathLike)) and config.api_cache_dir:
+                cache_dir = Path(config.api_cache_dir)
             audiodb_client = AudioDBClient(
                 cache_dir=cache_dir,
                 request_delay=config.api_request_delay
@@ -215,6 +234,16 @@ def main():
                 # Report progress for large collections
                 if len(mp3_files) > 10 and config.verbose:
                     logger.log_progress_update(i, len(mp3_files), file_path.name)
+
+                # If processor.process_file returns a ProcessingResult, use it directly
+                direct_result = processor.process_file(file_path)
+                if isinstance(direct_result, ProcessingResult):
+                    results.add_result(direct_result)
+                    if direct_result.success:
+                        logger.log_file_processing(file_path, direct_result.tags_added)
+                    else:
+                        logger.log_error(file_path, Exception(direct_result.error_message or "Processing failed"))
+                    continue
                 
                 # Extract existing metadata
                 existing_metadata = metadata_extractor.extract_metadata(file_path)

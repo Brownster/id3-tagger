@@ -134,6 +134,16 @@ class ConfigurationSchema:
         if not isinstance(self.default_year, str) or not self.default_year.strip():
             raise ValueError("default_year must be a non-empty string")
 
+        if not self.default_year.isdigit():
+            raise ValueError("default_year must be a valid year")
+
+        year_int = int(self.default_year)
+        current_year = datetime.now().year
+        if year_int < 1900 or year_int > current_year + 10:
+            raise ValueError(
+                f"default_year must be between 1900 and {current_year + 10}"
+            )
+
     def get_music_directory_path(self) -> Path:
         """Get the music directory as a Path object with expansion."""
         return Path(self.music_directory).expanduser().resolve()

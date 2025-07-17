@@ -60,7 +60,8 @@ def create_large_test_collection(generator: MP3TestFileGenerator, num_files: int
     return files
 
 
-def test_processing_performance(music_dir: Path, num_files: int = 100):
+def test_processing_performance(tmp_path: Path, num_files: int = 100):
+    music_dir = tmp_path
     """Test processing performance with a large collection."""
     print("=" * 60)
     print(f"PERFORMANCE TEST - {num_files} FILES")
