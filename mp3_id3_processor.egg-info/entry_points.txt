@@ -1,0 +1,2 @@
+[console_scripts]
+mp3-id3-processor = mp3_id3_processor.main:main
