@@ -107,7 +107,10 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.FileScanner')
     @patch('mp3_id3_processor.main.ID3Processor')
     @patch('mp3_id3_processor.main.ProcessingLogger')
-    def test_main_successful_processing(self, mock_logger_class, mock_processor_class,
+    @patch('mp3_id3_processor.main.MetadataExtractor')
+    @patch('mp3_id3_processor.main.AudioDBClient')
+    def test_main_successful_processing(self, mock_audiodb_client, mock_metadata_extractor,
+                                      mock_logger_class, mock_processor_class,
                                       mock_scanner_class, mock_validate_dir,
                                       mock_config_class, mock_parse_args):
         """Test successful main execution with file processing."""
@@ -122,6 +125,9 @@ class TestMainFunction:
         mock_config = Mock()
         mock_config.music_directory = Path("/test/music")
         mock_config.verbose = False
+        mock_config.use_api = True
+        mock_config.api_cache_dir = None
+        mock_config.api_request_delay = 0.5
         mock_config.update_from_dict.return_value = True
         mock_config_class.return_value = mock_config
         
@@ -133,11 +139,19 @@ class TestMainFunction:
         mock_scanner.scan_directory.return_value = test_files
         mock_scanner_class.return_value = mock_scanner
         
+        # Setup metadata extractor mock
+        mock_metadata_extractor_instance = Mock()
+        mock_metadata_extractor_instance.extract_metadata.return_value = Mock(needs_any_tags=lambda: True, has_lookup_info=lambda: True, artist="art", album="alb", title="ttl", needs_genre=lambda: True, needs_year=lambda: True)
+        mock_metadata_extractor.return_value = mock_metadata_extractor_instance
+
+        # Setup audiodb client mock
+        mock_audiodb_client_instance = Mock()
+        mock_audiodb_client_instance.search_album.return_value = Mock(has_genre=lambda: True, has_year=lambda: True, genre="Rock", year="2023")
+        mock_audiodb_client.return_value = mock_audiodb_client_instance
+
         # Setup processor mock
         mock_processor = Mock()
-        mock_result1 = ProcessingResult(Path("/test/music/song1.mp3"), True, ["genre"])
-        mock_result2 = ProcessingResult(Path("/test/music/song2.mp3"), True, [])
-        mock_processor.process_file.side_effect = [mock_result1, mock_result2]
+        mock_processor.add_missing_tags.return_value = ['genre', 'year']
         mock_processor_class.return_value = mock_processor
         
         # Setup logger mock
@@ -153,7 +167,7 @@ class TestMainFunction:
         
         # Verify components were called correctly
         mock_scanner.scan_directory.assert_called_once_with(mock_config.music_directory)
-        assert mock_processor.process_file.call_count == 2
+        assert mock_processor.add_missing_tags.call_count == 2
         mock_logger.log_start.assert_called_once_with(2)
         mock_logger.log_summary.assert_called_once()
     
@@ -220,7 +234,9 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.FileScanner')
     @patch('mp3_id3_processor.main.ID3Processor')
     @patch('mp3_id3_processor.main.ProcessingLogger')
-    def test_main_dry_run_mode(self, mock_logger_class, mock_processor_class,
+    @patch('mp3_id3_processor.main.MetadataExtractor')
+    @patch('mp3_id3_processor.main.AudioDBClient')
+    def test_main_dry_run_mode(self, mock_audiodb_client, mock_metadata_extractor, mock_logger_class, mock_processor_class,
                              mock_scanner_class, mock_validate_dir,
                              mock_config_class, mock_parse_args):
         """Test main function in dry-run mode."""
@@ -234,6 +250,9 @@ class TestMainFunction:
         mock_config = Mock()
         mock_config.music_directory = Path("/test/music")
         mock_config.verbose = False
+        mock_config.use_api = True
+        mock_config.api_cache_dir = None
+        mock_config.api_request_delay = 0.5
         mock_config.update_from_dict.return_value = True
         mock_config_class.return_value = mock_config
         
@@ -244,9 +263,18 @@ class TestMainFunction:
         mock_scanner.scan_directory.return_value = test_files
         mock_scanner_class.return_value = mock_scanner
         
+        # Setup metadata extractor mock
+        mock_metadata_extractor_instance = Mock()
+        mock_metadata_extractor_instance.extract_metadata.return_value = Mock(needs_any_tags=lambda: True, has_lookup_info=lambda: True, artist="art", album="alb", title="ttl", needs_genre=lambda: True, needs_year=lambda: True)
+        mock_metadata_extractor.return_value = mock_metadata_extractor_instance
+
+        # Setup audiodb client mock
+        mock_audiodb_client_instance = Mock()
+        mock_audiodb_client_instance.search_album.return_value = Mock(has_genre=lambda: True, has_year=lambda: True, genre="Rock", year="2023")
+        mock_audiodb_client.return_value = mock_audiodb_client_instance
+
         mock_processor = Mock()
-        mock_result = ProcessingResult(Path("/test/music/song1.mp3"), True, ["genre"])
-        mock_processor.process_file.return_value = mock_result
+        mock_processor.add_missing_tags.return_value = ['genre', 'year']
         mock_processor_class.return_value = mock_processor
         
         mock_logger = Mock()
