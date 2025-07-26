@@ -61,7 +61,7 @@ class TestEndToEndIntegration:
         mock_processor = Mock()
         results = [
             ProcessingResult(mp3_files[0], True, ["genre"]),  # Added genre
-            ProcessingResult(mp3_files[1], True, ["year"]),   # Added year
+            ProcessingResult(mp3_files[1], True, []),         # No genre needed
             ProcessingResult(mp3_files[2], True, [])          # No changes needed
         ]
         mock_processor.process_file.side_effect = results
@@ -72,7 +72,6 @@ class TestEndToEndIntegration:
             'mp3_id3_processor',
             '--directory', str(self.music_dir),
             '--genre', 'TestGenre',
-            '--year', '2023',
             '--verbose'
         ]
         

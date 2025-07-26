@@ -1,12 +1,12 @@
 # MP3 ID3 Processor
 
-A simple command-line tool that automatically adds missing genre and year ID3 tags to MP3 files in your music collection without modifying existing metadata.
+A simple command-line tool that automatically adds missing genre ID3 tag to MP3 files in your music collection without modifying existing metadata.
 
 ## Features
 
 - **Safe and Non-destructive**: Preserves all existing ID3 tags and metadata
 - **Automatic Discovery**: Recursively scans your music directory for MP3 files
-- **API Integration**: Uses TheAudioDB API to lookup missing metadata
+- **API Integration**: Uses the MusicBrainz API to lookup missing genre information
 - **Configurable Defaults**: Set custom default values for missing tags
 - **Comprehensive Logging**: Detailed progress reporting and error handling
 - **Dry Run Mode**: Preview changes before applying them
@@ -118,7 +118,6 @@ Create a JSON configuration file to customize default behavior:
 ```json
 {
   "default_genre": "Unknown",
-  "default_year": "2024",
   "music_directory": "~/Music",
   "use_api": true,
   "api_timeout": 10.0,
@@ -131,7 +130,6 @@ Create a JSON configuration file to customize default behavior:
 ### Configuration Options
 
 - **default_genre**: Default genre to use when API lookup fails
-- **default_year**: Default year to use when API lookup fails
 - **music_directory**: Directory to scan for MP3 files
 - **use_api**: Enable/disable API lookups
 - **api_timeout**: Timeout for API requests in seconds
@@ -142,20 +140,17 @@ Create a JSON configuration file to customize default behavior:
 ## How It Works
 
 1. **Scanning**: Recursively scans the specified directory for MP3 files
-2. **Analysis**: Examines each MP3 file to identify missing genre and year tags
-3. **API Lookup**: Uses TheAudioDB API to find missing metadata based on existing tags
+2. **Analysis**: Examines each MP3 file to identify missing genre tags
+3. **API Lookup**: Uses the MusicBrainz API to find missing genre information based on existing tags
 4. **Safe Modification**: Adds only missing tags while preserving all existing metadata
 5. **Reporting**: Provides detailed summary of all changes made
 
 ## API Integration
 
-The application uses TheAudioDB API to lookup missing metadata:
+The application uses the MusicBrainz API to lookup missing genre information:
 
-- **Album Search**: Uses artist and album information
-- **Track Search**: Uses artist and track title information  
-- **Artist Search**: Fallback using only artist information
-- **Caching**: API responses are cached to avoid repeated requests
-- **Rate Limiting**: Built-in delays to respect API limits
+- Searches recordings by artist, album, and track title
+- Returns the most popular genre tag found for the recording
 
 ## Safety Features
 
@@ -173,8 +168,8 @@ Starting MP3 ID3 processing...
 Found 150 MP3 files to process
 
 [1/150] song1.mp3: Added genre (Rock)
-[2/150] song2.mp3: Added year (2019)
-[3/150] song3.mp3: Added genre (Pop), year (2020)
+[2/150] song2.mp3: Already had genre
+[3/150] song3.mp3: Added genre (Pop)
 [4/150] song4.mp3: Already has all tags
 ...
 
@@ -184,7 +179,6 @@ Total files processed: 150
 Files modified: 45
 Tags added:
   genre: 25 files
-  year: 35 files
 Errors: 0
 Processing completed successfully!
 ```
@@ -194,8 +188,8 @@ Processing completed successfully!
 DRY RUN MODE - No files will be modified
 --------------------------------------------------
 Would add genre to: song1.mp3 (genre: Rock)
-Would add year to: song2.mp3 (year: 2019)
-Would add genre, year to: song3.mp3 (genre: Pop) (year: 2020)
+No changes for: song2.mp3 (already has genre)
+Would add genre to: song3.mp3 (genre: Pop)
 No changes for: song4.mp3 (already has all tags)
 ...
 
@@ -206,7 +200,6 @@ Total files found: 150
 Files that would be modified: 45
 Tags that would be added:
   genre: 25 files
-  year: 35 files
 ==================================================
 ```
 
