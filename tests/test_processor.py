@@ -186,8 +186,8 @@ class TestID3Processor:
         mock_tcon_instance = Mock()
         mock_tcon.return_value = mock_tcon_instance
         
-        processor._add_genre_tag(mock_audio)
-        
+        processor._add_genre_tag(mock_audio, "Rock")
+
         mock_tcon.assert_called_once_with(encoding=3, text=["Rock"])
         assert mock_audio.tags['TCON'] == mock_tcon_instance
     
@@ -202,8 +202,8 @@ class TestID3Processor:
         mock_tdrc.return_value = mock_tdrc_instance
         mock_tyer.return_value = mock_tyer_instance
         
-        processor._add_year_tag(mock_audio)
-        
+        processor._add_year_tag(mock_audio, "2023")
+
         mock_tdrc.assert_called_once_with(encoding=3, text=["2023"])
         mock_tyer.assert_called_once_with(encoding=3, text=["2023"])
         assert mock_audio.tags['TDRC'] == mock_tdrc_instance
@@ -236,8 +236,8 @@ class TestID3Processor:
         test_file = temp_dir / "test.mp3"
         mock_load.return_value = None
         
-        result = processor.process_file(test_file)
-        
+        result = processor.process_file(test_file, genre="Rock", year="2023")
+
         assert isinstance(result, ProcessingResult)
         assert result.file_path == test_file
         assert result.success is False
@@ -259,11 +259,8 @@ class TestID3Processor:
         mock_needs_year.return_value = False
         
         result = processor.process_file(test_file)
-        
-        assert isinstance(result, ProcessingResult)
-        assert result.file_path == test_file
-        assert result.success is True
-        assert result.tags_added == []
+
+        assert result is None
         mock_add_tags.assert_not_called()
     
     @patch.object(ID3Processor, 'add_missing_tags')
@@ -287,7 +284,7 @@ class TestID3Processor:
         assert result.file_path == test_file
         assert result.success is True
         assert result.tags_added == ['genre', 'year']
-        mock_add_tags.assert_called_once_with(mock_audio, test_file)
+        mock_add_tags.assert_called_once_with(mock_audio, test_file, 'Rock', '2023')
     
     @patch.object(ID3Processor, '_load_mp3_file')
     def test_process_file_exception(self, mock_load, processor, temp_dir):
@@ -317,11 +314,11 @@ class TestID3Processor:
         mock_needs_genre.return_value = True
         mock_needs_year.return_value = True
         
-        result = processor.add_missing_tags(mock_audio, test_file)
+        result = processor.add_missing_tags(mock_audio, test_file, genre="Rock", year="2023")
         
         assert result == ['genre', 'year']
-        mock_add_genre.assert_called_once_with(mock_audio)
-        mock_add_year.assert_called_once_with(mock_audio)
+        mock_add_genre.assert_called_once_with(mock_audio, "Rock")
+        mock_add_year.assert_called_once_with(mock_audio, "2023")
         mock_save.assert_called_once_with(mock_audio, test_file)
     
     @patch.object(ID3Processor, '_save_file_safely')
@@ -337,10 +334,10 @@ class TestID3Processor:
         mock_needs_genre.return_value = True
         mock_needs_year.return_value = False
         
-        result = processor.add_missing_tags(mock_audio, test_file)
+        result = processor.add_missing_tags(mock_audio, test_file, genre="Rock")
         
         assert result == ['genre']
-        mock_add_genre.assert_called_once_with(mock_audio)
+        mock_add_genre.assert_called_once_with(mock_audio, "Rock")
         mock_save.assert_called_once_with(mock_audio, test_file)
     
     @patch.object(ID3Processor, 'needs_year_tag')
@@ -370,7 +367,7 @@ class TestID3Processor:
         mock_add_genre.side_effect = Exception("Tag addition failed")
         
         with pytest.raises(Exception, match="Failed to add tags.*Tag addition failed"):
-            processor.add_missing_tags(mock_audio, test_file)
+            processor.add_missing_tags(mock_audio, test_file, genre="Rock")
     
     @patch.object(ID3Processor, '_load_mp3_file')
     def test_get_existing_tags_success(self, mock_load, processor, temp_dir):
