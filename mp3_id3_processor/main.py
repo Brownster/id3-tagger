@@ -222,16 +222,6 @@ def main():
                 if len(mp3_files) > 10 and config.verbose:
                     logger.log_progress_update(i, len(mp3_files), file_path.name)
 
-                # If processor.process_file returns a ProcessingResult, use it directly
-                direct_result = processor.process_file(file_path)
-                if isinstance(direct_result, ProcessingResult):
-                    results.add_result(direct_result)
-                    if direct_result.success:
-                        logger.log_file_processing(file_path, direct_result.tags_added)
-                    else:
-                        logger.log_error(file_path, Exception(direct_result.error_message or "Processing failed"))
-                    continue
-                
                 # Extract existing metadata
                 existing_metadata = metadata_extractor.extract_metadata(file_path)
                 if not existing_metadata:
@@ -304,7 +294,7 @@ def main():
                         # Load the MP3 file for modification
                         audio_file = processor._load_mp3_file(file_path)
                         if audio_file:
-                            added_tags = processor.add_missing_tags(audio_file, file_path, api_genre, "")
+                            added_tags = processor.add_missing_tags(audio_file, file_path, api_genre, None)
                             result = ProcessingResult(file_path=file_path, success=True, tags_added=added_tags)
                             results.add_result(result)
                             logger.log_file_processing(file_path, added_tags)

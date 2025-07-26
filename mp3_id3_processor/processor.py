@@ -22,7 +22,12 @@ class ID3Processor:
         self.config = config
         self.dry_run = dry_run
     
-    def process_file(self, file_path: Path) -> ProcessingResult:
+    def process_file(
+        self,
+        file_path: Path,
+        genre: Optional[str] = None,
+        year: Optional[str] = None,
+    ) -> Optional[ProcessingResult]:
         """Process a single MP3 file to add missing tags.
         
         Args:
@@ -41,30 +46,25 @@ class ID3Processor:
                     error_message="Failed to load MP3 file"
                 )
             
-            # Check what tags need to be added
             tags_to_add = []
-            
-            if self.needs_genre_tag(audio_file):
-                tags_to_add.append('genre')
-            
-            if self.needs_year_tag(audio_file):
-                tags_to_add.append('year')
-            
-            # If no tags need to be added, return success with empty tags_added
+
+            if genre and self.needs_genre_tag(audio_file):
+                tags_to_add.append("genre")
+
+            if year and self.needs_year_tag(audio_file):
+                tags_to_add.append("year")
+
             if not tags_to_add:
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=True,
-                    tags_added=[]
-                )
-            
-            # Add missing tags using configuration defaults
-            added_tags = self.add_missing_tags(audio_file, file_path)
-            
+                return None
+
+            added_tags = self.add_missing_tags(
+                audio_file, file_path, genre, year
+            )
+
             return ProcessingResult(
                 file_path=file_path,
                 success=True,
-                tags_added=added_tags
+                tags_added=added_tags,
             )
             
         except Exception as e:
@@ -207,31 +207,14 @@ class ID3Processor:
         """
         added_tags = []
 
-        # Preserve whether values were provided explicitly
-        provided_genre = genre is not None
-        provided_year = year is not None
-
-        if genre is None:
-            genre = self.config.default_genre
-        if year is None:
-            year = self.config.default_year
-
         try:
-            # Add genre tag if needed and provided
             if genre and self.needs_genre_tag(audio_file):
-                if provided_genre:
-                    self._add_genre_tag(audio_file, genre)
-                else:
-                    self._add_genre_tag(audio_file)
-                added_tags.append('genre')
+                self._add_genre_tag(audio_file, genre)
+                added_tags.append("genre")
 
-            # Add year tag if needed and provided
             if year and self.needs_year_tag(audio_file):
-                if provided_year:
-                    self._add_year_tag(audio_file, year)
-                else:
-                    self._add_year_tag(audio_file)
-                added_tags.append('year')
+                self._add_year_tag(audio_file, year)
+                added_tags.append("year")
             
             # Save the file if any tags were added
             if added_tags:
@@ -242,27 +225,13 @@ class ID3Processor:
         except Exception as e:
             raise Exception(f"Failed to add tags: {str(e)}")
     
-    def _add_genre_tag(self, audio_file: MP3, genre: Optional[str] = None) -> None:
-        """Add genre tag to the MP3 file.
-
-        Args:
-            audio_file: MP3 object to modify.
-            genre: Genre value to add. If None, uses default from configuration.
-        """
-        if genre is None:
-            genre = self.config.default_genre
+    def _add_genre_tag(self, audio_file: MP3, genre: str) -> None:
+        """Add genre tag to the MP3 file."""
         # Use TCON frame for genre
         audio_file.tags['TCON'] = TCON(encoding=3, text=[genre])
     
-    def _add_year_tag(self, audio_file: MP3, year: Optional[str] = None) -> None:
-        """Add year tag to the MP3 file.
-
-        Args:
-            audio_file: MP3 object to modify.
-            year: Year value to add. If None, uses default from configuration.
-        """
-        if year is None:
-            year = self.config.default_year
+    def _add_year_tag(self, audio_file: MP3, year: str) -> None:
+        """Add year tag to the MP3 file."""
         # Add TDRC frame (Recording Date) - ID3v2.4
         audio_file.tags['TDRC'] = TDRC(encoding=3, text=[year])
         
