@@ -109,7 +109,8 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.ProcessingLogger')
     @patch('mp3_id3_processor.main.MetadataExtractor')
     @patch('mp3_id3_processor.main.AudioDBClient')
-    def test_main_successful_processing(self, mock_audiodb_client, mock_metadata_extractor,
+    @patch('mp3_id3_processor.main.MusicBrainzClient')
+    def test_main_successful_processing(self, mock_mb_client, mock_audiodb_client, mock_metadata_extractor,
                                       mock_logger_class, mock_processor_class,
                                       mock_scanner_class, mock_validate_dir,
                                       mock_config_class, mock_parse_args):
@@ -236,7 +237,8 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.ProcessingLogger')
     @patch('mp3_id3_processor.main.MetadataExtractor')
     @patch('mp3_id3_processor.main.AudioDBClient')
-    def test_main_dry_run_mode(self, mock_audiodb_client, mock_metadata_extractor, mock_logger_class, mock_processor_class,
+    @patch('mp3_id3_processor.main.MusicBrainzClient')
+    def test_main_dry_run_mode(self, mock_mb_client, mock_audiodb_client, mock_metadata_extractor, mock_logger_class, mock_processor_class,
                              mock_scanner_class, mock_validate_dir,
                              mock_config_class, mock_parse_args):
         """Test main function in dry-run mode."""

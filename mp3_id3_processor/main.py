@@ -13,6 +13,7 @@ from .logger import ProcessingLogger
 from .models import ProcessingResults, ProcessingResult
 from .metadata_extractor import MetadataExtractor
 from .audiodb_client import AudioDBClient
+from .musicbrainz_client import MusicBrainzClient
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -183,6 +184,7 @@ def main():
         # Initialize API components if enabled
         metadata_extractor = MetadataExtractor()
         audiodb_client = None
+        musicbrainz_client = None
         if config.use_api:
             cache_dir = None
             if isinstance(config.api_cache_dir, (str, bytes, os.PathLike)) and config.api_cache_dir:
@@ -191,6 +193,7 @@ def main():
                 cache_dir=cache_dir,
                 request_delay=config.api_request_delay
             )
+            musicbrainz_client = MusicBrainzClient()
         
         # Display startup information
         if config.verbose:
@@ -293,9 +296,30 @@ def main():
                                 api_genre = api_metadata.genre
                             if api_metadata.has_year() and existing_metadata.needs_year():
                                 api_year = api_metadata.year
-                    
+
                     except Exception as e:
                         logger.log_warning(f"API lookup failed for {file_path.name}: {e}")
+
+                # Try MusicBrainz as a fallback for genre
+                if (
+                    config.use_api
+                    and musicbrainz_client
+                    and existing_metadata.needs_genre()
+                    and not api_genre
+                    and existing_metadata.artist
+                    and existing_metadata.album
+                    and existing_metadata.title
+                ):
+                    try:
+                        mb_metadata = musicbrainz_client.get_genre(
+                            existing_metadata.artist,
+                            existing_metadata.album,
+                            existing_metadata.title,
+                        )
+                        if mb_metadata and mb_metadata.has_genre():
+                            api_genre = mb_metadata.genre
+                    except Exception as e:
+                        logger.log_warning(f"MusicBrainz lookup failed for {file_path.name}: {e}")
                 
                 # Determine what tags we can add
                 tags_to_add = []
