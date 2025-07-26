@@ -108,9 +108,8 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.ID3Processor')
     @patch('mp3_id3_processor.main.ProcessingLogger')
     @patch('mp3_id3_processor.main.MetadataExtractor')
-    @patch('mp3_id3_processor.main.AudioDBClient')
     @patch('mp3_id3_processor.main.MusicBrainzClient')
-    def test_main_successful_processing(self, mock_mb_client, mock_audiodb_client, mock_metadata_extractor,
+    def test_main_successful_processing(self, mock_mb_client, mock_metadata_extractor,
                                       mock_logger_class, mock_processor_class,
                                       mock_scanner_class, mock_validate_dir,
                                       mock_config_class, mock_parse_args):
@@ -144,11 +143,6 @@ class TestMainFunction:
         mock_metadata_extractor_instance = Mock()
         mock_metadata_extractor_instance.extract_metadata.return_value = Mock(needs_any_tags=lambda: True, has_lookup_info=lambda: True, artist="art", album="alb", title="ttl", needs_genre=lambda: True, needs_year=lambda: True)
         mock_metadata_extractor.return_value = mock_metadata_extractor_instance
-
-        # Setup audiodb client mock
-        mock_audiodb_client_instance = Mock()
-        mock_audiodb_client_instance.search_album.return_value = Mock(has_genre=lambda: True, has_year=lambda: True, genre="Rock", year="2023")
-        mock_audiodb_client.return_value = mock_audiodb_client_instance
 
         # Setup processor mock
         mock_processor = Mock()
@@ -236,9 +230,8 @@ class TestMainFunction:
     @patch('mp3_id3_processor.main.ID3Processor')
     @patch('mp3_id3_processor.main.ProcessingLogger')
     @patch('mp3_id3_processor.main.MetadataExtractor')
-    @patch('mp3_id3_processor.main.AudioDBClient')
     @patch('mp3_id3_processor.main.MusicBrainzClient')
-    def test_main_dry_run_mode(self, mock_mb_client, mock_audiodb_client, mock_metadata_extractor, mock_logger_class, mock_processor_class,
+    def test_main_dry_run_mode(self, mock_mb_client, mock_metadata_extractor, mock_logger_class, mock_processor_class,
                              mock_scanner_class, mock_validate_dir,
                              mock_config_class, mock_parse_args):
         """Test main function in dry-run mode."""
@@ -269,11 +262,6 @@ class TestMainFunction:
         mock_metadata_extractor_instance = Mock()
         mock_metadata_extractor_instance.extract_metadata.return_value = Mock(needs_any_tags=lambda: True, has_lookup_info=lambda: True, artist="art", album="alb", title="ttl", needs_genre=lambda: True, needs_year=lambda: True)
         mock_metadata_extractor.return_value = mock_metadata_extractor_instance
-
-        # Setup audiodb client mock
-        mock_audiodb_client_instance = Mock()
-        mock_audiodb_client_instance.search_album.return_value = Mock(has_genre=lambda: True, has_year=lambda: True, genre="Rock", year="2023")
-        mock_audiodb_client.return_value = mock_audiodb_client_instance
 
         mock_processor = Mock()
         mock_processor.add_missing_tags.return_value = ['genre', 'year']

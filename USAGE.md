@@ -50,8 +50,7 @@ mp3-id3-processor --dry-run --verbose
 
 This will show you:
 - How many MP3 files were found
-- Which files would have tags added
-- What tags would be added (genre, year, or both)
+- Which files would have a genre added
 - Any files that couldn't be processed
 
 ### Step 4: Run for Real
@@ -102,8 +101,8 @@ mp3-id3-processor --cache-dir ./api-cache --verbose
 DRY RUN MODE - No files will be modified
 --------------------------------------------------
 Would add genre to: song1.mp3 (genre: Rock)
-Would add year to: song2.mp3 (year: 2019)
-Would add genre, year to: song3.mp3 (genre: Pop) (year: 2020)
+No changes for: song2.mp3 (already has genre)
+Would add genre to: song3.mp3 (genre: Pop)
 No changes for: song4.mp3 (already has all tags)
 ```
 
@@ -113,8 +112,8 @@ Starting MP3 ID3 processing...
 Found 150 MP3 files to process
 
 [1/150] song1.mp3: Added genre (Rock)
-[2/150] song2.mp3: Added year (2019)
-[3/150] song3.mp3: Added genre (Pop), year (2020)
+[2/150] song2.mp3: Already had genre
+[3/150] song3.mp3: Added genre (Pop)
 [4/150] song4.mp3: Already has all tags
 ```
 
@@ -126,7 +125,6 @@ Total files processed: 150
 Files modified: 45
 Tags added:
   genre: 25 files
-  year: 35 files
 Errors: 0
 Processing completed successfully!
 ```
@@ -151,7 +149,6 @@ Create a `config.json` file for persistent settings:
 ```json
 {
   "default_genre": "Unknown",
-  "default_year": "2024",
   "music_directory": "~/Music",
   "use_api": true,
   "verbose": true
@@ -165,9 +162,7 @@ mp3-id3-processor --config config.json
 
 ## Safety Features
 
-### What the Tool Does
 - ✅ Adds missing genre tags
-- ✅ Adds missing year tags
 - ✅ Preserves all existing metadata
 - ✅ Skips files that already have all tags
 - ✅ Provides detailed logging

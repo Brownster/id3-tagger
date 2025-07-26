@@ -1,7 +1,6 @@
 README.md
 setup.py
 mp3_id3_processor/__init__.py
-mp3_id3_processor/audiodb_client.py
 mp3_id3_processor/config.py
 mp3_id3_processor/logger.py
 mp3_id3_processor/main.py
@@ -17,7 +16,6 @@ mp3_id3_processor.egg-info/requires.txt
 mp3_id3_processor.egg-info/top_level.txt
 tests/__init__.py
 tests/fixtures.py
-tests/test_audiodb_client.py
 tests/test_comprehensive_integration.py
 tests/test_config.py
 tests/test_integration_e2e.py

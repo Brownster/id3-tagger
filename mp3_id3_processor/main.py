@@ -12,7 +12,6 @@ from .processor import ID3Processor
 from .logger import ProcessingLogger
 from .models import ProcessingResults, ProcessingResult
 from .metadata_extractor import MetadataExtractor
-from .audiodb_client import AudioDBClient
 from .musicbrainz_client import MusicBrainzClient
 
 
@@ -23,7 +22,7 @@ def parse_arguments() -> argparse.Namespace:
         Parsed arguments namespace.
     """
     parser = argparse.ArgumentParser(
-        description="Automatically add missing genre and year ID3 tags to MP3 files",
+        description="Automatically add missing genre ID3 tags to MP3 files",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -85,11 +84,6 @@ Examples:
         help='Override default genre to add to files'
     )
 
-    parser.add_argument(
-        '--year',
-        type=str,
-        help='Override default year to add to files'
-    )
     
     return parser.parse_args()
 
@@ -163,8 +157,6 @@ def main():
             config_updates['verbose'] = True
         if args.genre:
             config_updates['default_genre'] = args.genre
-        if args.year:
-            config_updates['default_year'] = args.year
         
         if config_updates:
             if not config.update_from_dict(config_updates):
@@ -183,16 +175,8 @@ def main():
         
         # Initialize API components if enabled
         metadata_extractor = MetadataExtractor()
-        audiodb_client = None
         musicbrainz_client = None
         if config.use_api:
-            cache_dir = None
-            if isinstance(config.api_cache_dir, (str, bytes, os.PathLike)) and config.api_cache_dir:
-                cache_dir = Path(config.api_cache_dir)
-            audiodb_client = AudioDBClient(
-                cache_dir=cache_dir,
-                request_delay=config.api_request_delay
-            )
             musicbrainz_client = MusicBrainzClient()
         
         # Display startup information
@@ -261,51 +245,21 @@ def main():
                     logger.log_error(file_path, Exception("Could not extract metadata"))
                     continue
                 
-                # Skip files that don't need any tags
-                if not existing_metadata.needs_any_tags():
+                # Skip files that already have a genre tag
+                if not existing_metadata.needs_genre():
                     if config.verbose:
-                        print(f"[{i}/{len(mp3_files)}] {file_path.name}: Already has all tags")
+                        print(f"[{i}/{len(mp3_files)}] {file_path.name}: Already has genre")
                     result = ProcessingResult(file_path=file_path, success=True, tags_added=[])
                     results.add_result(result)
                     continue
                 
                 # Try to get metadata from API if enabled
                 api_genre = None
-                api_year = None
-                
-                if config.use_api and audiodb_client and existing_metadata.has_lookup_info():
-                    try:
-                        # Try different search strategies
-                        api_metadata = None
-                        
-                        # 1. Try album search if we have artist and album
-                        if existing_metadata.artist and existing_metadata.album:
-                            api_metadata = audiodb_client.search_album(existing_metadata.artist, existing_metadata.album)
-                        
-                        # 2. Try track search if we have artist and title
-                        if not api_metadata and existing_metadata.artist and existing_metadata.title:
-                            api_metadata = audiodb_client.search_track(existing_metadata.artist, existing_metadata.title)
-                        
-                        # 3. Try artist search as fallback
-                        if not api_metadata and existing_metadata.artist:
-                            api_metadata = audiodb_client.search_artist(existing_metadata.artist)
-                        
-                        # Extract useful information from API response
-                        if api_metadata:
-                            if api_metadata.has_genre() and existing_metadata.needs_genre():
-                                api_genre = api_metadata.genre
-                            if api_metadata.has_year() and existing_metadata.needs_year():
-                                api_year = api_metadata.year
 
-                    except Exception as e:
-                        logger.log_warning(f"API lookup failed for {file_path.name}: {e}")
-
-                # Try MusicBrainz as a fallback for genre
                 if (
                     config.use_api
                     and musicbrainz_client
-                    and existing_metadata.needs_genre()
-                    and not api_genre
+                    and existing_metadata.has_lookup_info()
                     and existing_metadata.artist
                     and existing_metadata.album
                     and existing_metadata.title
@@ -320,21 +274,19 @@ def main():
                             api_genre = mb_metadata.genre
                     except Exception as e:
                         logger.log_warning(f"MusicBrainz lookup failed for {file_path.name}: {e}")
+
                 
                 # Determine what tags we can add
                 tags_to_add = []
                 if api_genre and existing_metadata.needs_genre():
                     tags_to_add.append('genre')
-                if api_year and existing_metadata.needs_year():
-                    tags_to_add.append('year')
                 
                 if args.dry_run:
                     # In dry run mode, just show what would be done
                     if tags_to_add:
                         tags_str = ", ".join(tags_to_add)
                         genre_info = f" (genre: {api_genre})" if api_genre else ""
-                        year_info = f" (year: {api_year})" if api_year else ""
-                        print(f"Would add {tags_str} to: {file_path.name}{genre_info}{year_info}")
+                        print(f"Would add {tags_str} to: {file_path.name}{genre_info}")
                         
                         # Create mock result for statistics
                         result = ProcessingResult(file_path=file_path, success=True, tags_added=tags_to_add)
@@ -352,7 +304,7 @@ def main():
                         # Load the MP3 file for modification
                         audio_file = processor._load_mp3_file(file_path)
                         if audio_file:
-                            added_tags = processor.add_missing_tags(audio_file, file_path, api_genre, api_year)
+                            added_tags = processor.add_missing_tags(audio_file, file_path, api_genre, "")
                             result = ProcessingResult(file_path=file_path, success=True, tags_added=added_tags)
                             results.add_result(result)
                             logger.log_file_processing(file_path, added_tags)
