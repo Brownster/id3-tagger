@@ -62,7 +62,8 @@ def _process_files(paths: List[Path], config: Configuration) -> ProcessingResult
     results = ProcessingResults(total_files=len(paths))
     logger.log_start(len(paths))
 
-    album_cache: dict[str, tuple[Optional[str], Optional[str]]] = {}
+    # Remove album caching to ensure accurate metadata for various artist albums
+    # Each track will get its own API lookup for proper genre/year detection
 
     for p in paths:
         meta = extractor.extract_metadata(p)
@@ -75,24 +76,17 @@ def _process_files(paths: List[Path], config: Configuration) -> ProcessingResult
         genre = meta.genre
         year = meta.year
 
-        cache_key = str(p.parent)
+        # Get metadata from API if enabled and track needs tags
         if config.use_api and mb_client and meta.has_lookup_info():
-            if cache_key in album_cache:
-                api_genre, api_year = album_cache[cache_key]
-            else:
+            if (not genre and meta.needs_genre()) or (not year and meta.needs_year()):
                 mb = mb_client.get_metadata(meta.artist or "", meta.album or "", meta.title or "")
-                api_genre = mb.genre if mb else None
-                api_year = mb.year if mb else None
-                album_cache[cache_key] = (api_genre, api_year)
-            if not genre and api_genre:
-                genre = api_genre
-            if not year and api_year:
-                year = api_year
+                if mb:
+                    if not genre and mb.genre:
+                        genre = mb.genre
+                    if not year and mb.year:
+                        year = mb.year
 
-        if not genre:
-            genre = config.default_genre
-        if not year:
-            year = config.default_year
+        # Only use values obtained from API - no default fallbacks
 
         result = processor.process_file(p, genre=genre, year=year)
         results.add_result(result)

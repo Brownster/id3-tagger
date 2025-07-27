@@ -108,8 +108,8 @@ class ConfigurationSchema:
     api_timeout: float = 10.0
     api_cache_dir: Optional[str] = None
     api_request_delay: float = 0.5
-    default_genre: str = "Unknown"
-    default_year: str = str(datetime.now().year)
+    default_genre: Optional[str] = None
+    default_year: Optional[str] = None
 
     def __post_init__(self):
         """Validate configuration values after initialization."""
@@ -134,21 +134,22 @@ class ConfigurationSchema:
         if not isinstance(self.api_request_delay, (int, float)) or self.api_request_delay < 0:
             raise ValueError("api_request_delay must be a non-negative number")
         
-        if not isinstance(self.default_genre, str) or not self.default_genre.strip():
-            raise ValueError("default_genre must be a non-empty string")
+        if self.default_genre is not None and (not isinstance(self.default_genre, str) or not self.default_genre.strip()):
+            raise ValueError("default_genre must be a non-empty string or None")
         
-        if not isinstance(self.default_year, str) or not self.default_year.strip():
-            raise ValueError("default_year must be a non-empty string")
+        if self.default_year is not None:
+            if not isinstance(self.default_year, str) or not self.default_year.strip():
+                raise ValueError("default_year must be a non-empty string or None")
 
-        if not self.default_year.isdigit():
-            raise ValueError("default_year must be a valid year")
+            if not self.default_year.isdigit():
+                raise ValueError("default_year must be a valid year")
 
-        year_int = int(self.default_year)
-        current_year = datetime.now().year
-        if year_int < 1900 or year_int > current_year + 10:
-            raise ValueError(
-                f"default_year must be between 1900 and {current_year + 10}"
-            )
+            year_int = int(self.default_year)
+            current_year = datetime.now().year
+            if year_int < 1900 or year_int > current_year + 10:
+                raise ValueError(
+                    f"default_year must be between 1900 and {current_year + 10}"
+                )
 
     def get_music_directory_path(self) -> Path:
         """Get the music directory as a Path object with expansion."""

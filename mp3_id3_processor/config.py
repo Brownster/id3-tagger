@@ -56,8 +56,8 @@ class Configuration:
         api_timeout = config_data.get('api_timeout', 10.0)
         api_cache_dir = config_data.get('api_cache_dir', None)
         api_request_delay = config_data.get('api_request_delay', 0.5)
-        default_genre = config_data.get('default_genre', 'Unknown')
-        default_year = config_data.get('default_year', str(datetime.now().year))
+        default_genre = config_data.get('default_genre', None)
+        default_year = config_data.get('default_year', None)
         
         return ConfigurationSchema(
             music_directory=music_directory,
@@ -107,12 +107,12 @@ class Configuration:
         return self._schema.api_request_delay
     
     @property
-    def default_genre(self) -> str:
+    def default_genre(self) -> Optional[str]:
         """Get default genre setting."""
         return self._schema.default_genre
     
     @property
-    def default_year(self) -> str:
+    def default_year(self) -> Optional[str]:
         """Get default year setting."""
         return self._schema.default_year
     
