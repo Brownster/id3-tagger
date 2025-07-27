@@ -260,7 +260,8 @@ class TestID3Processor:
         
         result = processor.process_file(test_file)
 
-        assert result is None
+        assert isinstance(result, ProcessingResult)
+        assert result.tags_added == []
         mock_add_tags.assert_not_called()
     
     @patch.object(ID3Processor, 'add_missing_tags')

@@ -27,7 +27,7 @@ class ID3Processor:
         file_path: Path,
         genre: Optional[str] = None,
         year: Optional[str] = None,
-    ) -> Optional[ProcessingResult]:
+    ) -> ProcessingResult:
         """Process a single MP3 file to add missing tags.
         
         Args:
@@ -48,17 +48,24 @@ class ID3Processor:
             
             tags_to_add = []
 
-            if genre and self.needs_genre_tag(audio_file):
+            final_genre = genre or self.config.default_genre
+            final_year = year or self.config.default_year
+
+            if self.needs_genre_tag(audio_file):
                 tags_to_add.append("genre")
 
-            if year and self.needs_year_tag(audio_file):
+            if self.needs_year_tag(audio_file):
                 tags_to_add.append("year")
 
             if not tags_to_add:
-                return None
+                return ProcessingResult(
+                    file_path=file_path,
+                    success=True,
+                    tags_added=[],
+                )
 
             added_tags = self.add_missing_tags(
-                audio_file, file_path, genre, year
+                audio_file, file_path, final_genre, final_year
             )
 
             return ProcessingResult(
