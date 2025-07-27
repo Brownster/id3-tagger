@@ -90,6 +90,12 @@ Examples:
         help='Override default genre to add to files'
     )
 
+    parser.add_argument(
+        '--api-mode',
+        action='store_true',
+        help='Start a simple HTTP API server instead of processing once'
+    )
+
     
     return parser.parse_args()
 
@@ -169,6 +175,11 @@ def main():
                 print("Error: Invalid configuration values provided")
                 sys.exit(1)
         
+        if args.api_mode:
+            from .api_server import run_api_server
+            run_api_server(config)
+            sys.exit(0)
+
         # Validate music directory
         music_dir = config.music_directory
         if not validate_music_directory(music_dir):
