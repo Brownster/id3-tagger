@@ -16,7 +16,7 @@ class ID3Processor:
         """Initialize the ID3 processor with configuration.
         
         Args:
-            config: Configuration instance containing default values.
+            config: Configuration instance for application settings.
             dry_run: If True, don't actually modify files.
         """
         self.config = config
@@ -29,10 +29,14 @@ class ID3Processor:
         year: Optional[str] = None,
     ) -> ProcessingResult:
         """Process a single MP3 file to add missing tags.
-        
+
+        Tags are only written if valid values are provided via the ``genre``
+        and ``year`` parameters. If a value is ``None`` the corresponding tag
+        will not be added.
+
         Args:
             file_path: Path to the MP3 file to process.
-            
+
         Returns:
             ProcessingResult with details of the processing outcome.
         """
@@ -48,13 +52,13 @@ class ID3Processor:
             
             tags_to_add = []
 
-            final_genre = genre or self.config.default_genre
-            final_year = year or self.config.default_year
+            final_genre = genre
+            final_year = year
 
-            if self.needs_genre_tag(audio_file):
+            if final_genre and self.needs_genre_tag(audio_file):
                 tags_to_add.append("genre")
 
-            if self.needs_year_tag(audio_file):
+            if final_year and self.needs_year_tag(audio_file):
                 tags_to_add.append("year")
 
             if not tags_to_add:

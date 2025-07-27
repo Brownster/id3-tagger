@@ -258,7 +258,7 @@ class TestID3Processor:
         mock_needs_genre.return_value = False
         mock_needs_year.return_value = False
         
-        result = processor.process_file(test_file)
+        result = processor.process_file(test_file, genre="Rock", year="2023")
 
         assert isinstance(result, ProcessingResult)
         assert result.tags_added == []
@@ -279,7 +279,7 @@ class TestID3Processor:
         mock_needs_year.return_value = True
         mock_add_tags.return_value = ['genre', 'year']
         
-        result = processor.process_file(test_file)
+        result = processor.process_file(test_file, genre="Rock", year="2023")
         
         assert isinstance(result, ProcessingResult)
         assert result.file_path == test_file

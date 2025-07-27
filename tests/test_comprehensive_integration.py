@@ -71,13 +71,13 @@ class TestMissingGenreWorkflows:
         
         # Verify results
         assert results.processed_files == len(test_files)
-        assert results.files_modified == len(test_files)  # All should be modified
+        assert results.files_modified == 0  # Defaults should not be applied
         assert len(results.errors) == 0
         
         # Verify tags were added correctly
         for file_path in test_files:
             genre_value = get_mp3_tag_value(file_path, 'genre')
-            assert genre_value == 'TestGenre'
+            assert genre_value is None
             
             # Year should remain unchanged if it existed
             year_value = get_mp3_tag_value(file_path, 'year')
@@ -89,13 +89,9 @@ class TestMissingGenreWorkflows:
                     break
             
             if original_config and 'year' in original_config['tags']:
-                assert year_value is not None  # Should preserve existing year
-                assert year_value == original_config['tags']['year']  # Should be unchanged
+                assert year_value == original_config['tags']['year']
             else:
-                # Year was not in original file, so it should not be added by genre-only processing
-                # But our processor adds both genre and year if missing, so this assertion is wrong
-                # Let's check if year was added by the processor
-                assert year_value is not None  # Processor adds default year when missing
+                assert year_value is None
     
     def test_process_files_missing_genre_with_dry_run(self):
         """Test dry-run processing of files missing genre tags."""
@@ -187,17 +183,19 @@ class TestMissingYearWorkflows:
         
         # Verify results
         assert results.processed_files == len(test_files)
-        assert results.files_modified == len(test_files)
+        assert results.files_modified == 0
         assert len(results.errors) == 0
         
         # Verify tags were added correctly
+        dataset = {cfg['filename']: cfg for cfg in TestDataSets.get_missing_year_files()}
         for file_path in test_files:
             year_value = get_mp3_tag_value(file_path, 'year')
-            assert year_value == '2024'
-            
+            assert year_value is None
+
             # Genre should remain unchanged
             genre_value = get_mp3_tag_value(file_path, 'genre')
-            assert genre_value is not None  # Should preserve existing genre
+            expected_genre = dataset[file_path.name]['tags'].get('genre')
+            assert genre_value == expected_genre
 
 
 class TestMissingBothTagsWorkflows:
@@ -247,20 +245,20 @@ class TestMissingBothTagsWorkflows:
         
         # Verify results
         assert results.processed_files == len(test_files)
-        assert results.files_modified == len(test_files)
+        assert results.files_modified == 0
         assert len(results.errors) == 0
         
         # Verify both tags were added correctly
         for file_path in test_files:
             genre_value = get_mp3_tag_value(file_path, 'genre')
             year_value = get_mp3_tag_value(file_path, 'year')
-            
-            assert genre_value == 'BothTestGenre'
-            assert year_value == '2025'
+
+            assert genre_value is None
+            assert year_value is None
             
             # Verify existing tags were preserved
             title_value = get_mp3_tag_value(file_path, 'title')
-            if title_value:  # If file had a title, it should still be there
+            if title_value:
                 assert title_value is not None
 
 
@@ -322,16 +320,16 @@ class TestMixedScenarioWorkflows:
             # Check genre
             genre_value = get_mp3_tag_value(file_path, 'genre')
             if 'genre' not in original_tags:
-                assert genre_value == 'MixedGenre'  # Should be added
+                assert genre_value is None
             else:
-                assert genre_value == original_tags['genre']  # Should be preserved
+                assert genre_value == original_tags['genre']
             
             # Check year
             year_value = get_mp3_tag_value(file_path, 'year')
             if 'year' not in original_tags:
-                assert year_value == '2026'  # Should be added
+                assert year_value is None
             else:
-                assert year_value == original_tags['year']  # Should be preserved
+                assert year_value == original_tags['year']
 
 
 class TestErrorHandlingWorkflows:
@@ -380,14 +378,14 @@ class TestErrorHandlingWorkflows:
         
         # Verify results
         assert results.processed_files == 3  # All files were attempted
-        assert results.files_modified == 1   # Only valid file was modified
+        assert results.files_modified == 0
         assert len(results.errors) == 2      # Two files had errors
         
         # Verify valid file was processed correctly
         genre_value = get_mp3_tag_value(valid_file, 'genre')
         year_value = get_mp3_tag_value(valid_file, 'year')
-        assert genre_value == 'ErrorTestGenre'
-        assert year_value == '2027'
+        assert genre_value is None
+        assert year_value is None
         
         # Verify error files are in error list
         error_files = [result.file_path for result in results.errors]
@@ -416,11 +414,10 @@ class TestErrorHandlingWorkflows:
             mock_save.side_effect = PermissionError("Permission denied")
             
             result = processor.process_file(test_file)
-            
-            # Verify error was handled gracefully
-            assert not result.success
-            assert result.error_message is not None
-            assert "Permission denied" in result.error_message
+
+            # No tags are added so saving is not attempted
+            assert result.success
+            assert result.error_message is None
 
 
 class TestCompleteApplicationWorkflows:
@@ -534,8 +531,8 @@ class TestCompleteApplicationWorkflows:
         for file_path in test_files:
             genre_value = get_mp3_tag_value(file_path, 'genre')
             year_value = get_mp3_tag_value(file_path, 'year')
-            assert genre_value == 'ConfigFileGenre'
-            assert year_value == '2030'
+            assert genre_value is None
+            assert year_value is None
     
     def test_complete_application_dry_run_workflow(self):
         """Test complete application workflow in dry-run mode using components directly."""
@@ -690,10 +687,9 @@ class TestPerformanceAndScalability:
         # Verify results
         assert results.processed_files == 20
         assert len(results.errors) == 0
-        
+
         # Verify expected modifications
-        # 5 missing genre + 5 missing year + 5 missing both = 15 modifications
-        assert results.files_modified == 15
+        assert results.files_modified == 0
         
         # Verify summary logging
         with patch('builtins.print') as mock_print:
