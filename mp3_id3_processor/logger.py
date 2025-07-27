@@ -96,7 +96,12 @@ class ProcessingLogger:
                     print(f"  {error_result.file_path.name}: {error_result.error_message}")
         else:
             print(f"\nNo errors encountered")
-        
+
+        if results.missing_tags:
+            print("\nFiles still missing tags:")
+            for path, tags in results.missing_tags.items():
+                print(f"  {path.name}: missing {', '.join(tags)}")
+
         print("=" * 50)
     
     def log_progress_update(self, current: int, total: int, file_name: Optional[str] = None):

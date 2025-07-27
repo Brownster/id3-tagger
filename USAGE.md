@@ -137,6 +137,7 @@ Processing completed successfully!
 |--------|---------|---------|
 | `--directory` | Specify music directory | `--directory /media/music` |
 | `--dry-run` | Preview changes only | `--dry-run` |
+| `--report-missing` | Report files missing genre/year (use with `--dry-run`) | `--dry-run --report-missing` |
 | `--verbose` | Show detailed output | `--verbose` |
 | `--no-api` | Disable internet lookups | `--no-api` |
 | `--config` | Use config file | `--config my-settings.json` |

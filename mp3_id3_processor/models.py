@@ -37,6 +37,7 @@ class ProcessingResults:
     files_modified: int = 0
     errors: List[ProcessingResult] = field(default_factory=list)
     tags_added_count: Dict[str, int] = field(default_factory=dict)
+    missing_tags: Dict[Path, List[str]] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate the ProcessingResults after initialization."""
@@ -78,6 +79,11 @@ class ProcessingResults:
                     self.tags_added_count[tag] = self.tags_added_count.get(tag, 0) + 1
         else:
             self.errors.append(result)
+
+    def add_missing(self, file_path: Path, tags: List[str]):
+        """Record tags that were still missing after processing."""
+        if tags:
+            self.missing_tags[file_path] = tags
 
     @property
     def success_rate(self) -> float:

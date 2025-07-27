@@ -27,12 +27,14 @@ class ID3Processor:
         file_path: Path,
         genre: Optional[str] = None,
         year: Optional[str] = None,
-    ) -> Optional[ProcessingResult]:
+    ) -> ProcessingResult:
         """Process a single MP3 file to add missing tags.
 
         Tags are only written if valid values are provided via the ``genre``
         and ``year`` parameters. If a value is ``None`` the corresponding tag
-        will not be added.
+        will not be added.  Even when no tags are provided this method will
+        load the file and return a ``ProcessingResult`` indicating that no
+        changes were made.
 
         Args:
             file_path: Path to the MP3 file to process.
@@ -40,58 +42,56 @@ class ID3Processor:
             year: Year to add if missing (if None, no year will be added)
 
         Returns:
-            ProcessingResult with details of the processing outcome, or None
-            if no genre/year were provided (indicating the caller should handle API lookup).
+            ProcessingResult with details of the processing outcome.
         """
-        # If no genre or year provided, return None to indicate the caller
-        # should handle metadata extraction and API lookup
-        if genre is None and year is None:
-            return None
+
+        # If no tags are provided we still attempt to load the file so that any
+        # loading errors are reported back to the caller. When the load is
+        # successful and no tags were requested this method returns ``None`` to
+        # signal that no processing was performed.
             
         try:
-            # Load the MP3 file
+            # Load the MP3 file so that any errors surface
             audio_file = self._load_mp3_file(file_path)
-            if audio_file is None:
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=False,
-                    error_message="Failed to load MP3 file"
-                )
-            
-            tags_to_add = []
-
-            final_genre = genre
-            final_year = year
-
-            if final_genre and self.needs_genre_tag(audio_file):
-                tags_to_add.append("genre")
-
-            if final_year and self.needs_year_tag(audio_file):
-                tags_to_add.append("year")
-
-            if not tags_to_add:
-                return ProcessingResult(
-                    file_path=file_path,
-                    success=True,
-                    tags_added=[],
-                )
-
-            added_tags = self.add_missing_tags(
-                audio_file, file_path, final_genre, final_year
-            )
-
-            return ProcessingResult(
-                file_path=file_path,
-                success=True,
-                tags_added=added_tags,
-            )
-            
         except Exception as e:
             return ProcessingResult(
                 file_path=file_path,
                 success=False,
                 error_message=str(e)
             )
+
+        if audio_file is None:
+            return ProcessingResult(
+                file_path=file_path,
+                success=False,
+                error_message="Failed to load MP3 file"
+            )
+
+        # Prepare to add tags if provided
+        tags_to_add = []
+
+        if genre and self.needs_genre_tag(audio_file):
+            tags_to_add.append("genre")
+
+        if year and self.needs_year_tag(audio_file):
+            tags_to_add.append("year")
+
+        if not tags_to_add:
+            return ProcessingResult(
+                file_path=file_path,
+                success=True,
+                tags_added=[],
+            )
+
+        added_tags = self.add_missing_tags(
+            audio_file, file_path, genre, year
+        )
+
+        return ProcessingResult(
+            file_path=file_path,
+            success=True,
+            tags_added=added_tags,
+        )
     
     def _load_mp3_file(self, file_path: Path) -> Optional[MP3]:
         """Load an MP3 file using Mutagen with comprehensive error handling.
