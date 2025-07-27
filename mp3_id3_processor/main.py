@@ -4,7 +4,7 @@ import argparse
 import sys
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 from .config import Configuration
 from .scanner import FileScanner, ScannerError, DirectoryAccessError
@@ -238,6 +238,9 @@ def main():
         
         # Start processing
         logger.log_start(len(mp3_files))
+
+        # Cache API results per album directory to minimize API calls
+        album_cache: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
         
         if args.dry_run:
             print("DRY RUN MODE - No files will be modified")
@@ -291,7 +294,11 @@ def main():
                 api_genre = None
                 api_year = None
 
-                if (
+                album_key = str(file_path.parent)
+                cached = album_cache.get(album_key)
+                if cached is not None:
+                    api_genre, api_year = cached
+                elif (
                     config.use_api
                     and musicbrainz_client
                     and existing_metadata.has_lookup_info()
@@ -311,7 +318,12 @@ def main():
                             if mb_metadata.has_year():
                                 api_year = mb_metadata.year
                     except Exception as e:
-                        logger.log_warning(f"MusicBrainz lookup failed for {file_path.name}: {e}")
+                        logger.log_warning(
+                            f"MusicBrainz lookup failed for {file_path.name}: {e}"
+                        )
+                    album_cache[album_key] = (api_genre, api_year)
+                if album_key not in album_cache:
+                    album_cache[album_key] = (api_genre, api_year)
 
                 
                 # Determine what tags we can add

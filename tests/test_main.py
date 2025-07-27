@@ -314,6 +314,90 @@ class TestMainFunction:
         assert exc_info.value.code == 1
         mock_print.assert_called_with("Error: Invalid configuration values provided")
 
+    @patch('mp3_id3_processor.main.parse_arguments')
+    @patch('mp3_id3_processor.main.Configuration')
+    @patch('mp3_id3_processor.main.validate_music_directory')
+    @patch('mp3_id3_processor.main.FileScanner')
+    @patch('mp3_id3_processor.main.ID3Processor')
+    @patch('mp3_id3_processor.main.ProcessingLogger')
+    @patch('mp3_id3_processor.main.MetadataExtractor')
+    @patch('mp3_id3_processor.main.MusicBrainzClient')
+    def test_album_caching_reduces_api_calls(
+        self,
+        mock_mb_client,
+        mock_metadata_extractor,
+        mock_logger_class,
+        mock_processor_class,
+        mock_scanner_class,
+        mock_validate_dir,
+        mock_config_class,
+        mock_parse_args,
+    ):
+        """Ensure API is called once per album directory."""
+        mock_args = Mock()
+        mock_args.config = None
+        mock_args.directory = None
+        mock_args.verbose = False
+        mock_args.dry_run = False
+        mock_parse_args.return_value = mock_args
+
+        mock_config = Mock()
+        mock_config.music_directory = Path("/test/music")
+        mock_config.verbose = False
+        mock_config.use_api = True
+        mock_config.api_cache_dir = None
+        mock_config.api_request_delay = 0.5
+        mock_config.update_from_dict.return_value = True
+        mock_config_class.return_value = mock_config
+
+        mock_validate_dir.return_value = True
+
+        # Two files in same album directory
+        mock_scanner = Mock()
+        test_files = [
+            Path("/test/music/Artist/Album/song1.mp3"),
+            Path("/test/music/Artist/Album/song2.mp3"),
+        ]
+        mock_scanner.scan_directory.return_value = test_files
+        mock_scanner_class.return_value = mock_scanner
+
+        # Metadata extractor returns new metadata object for each call
+        def make_meta():
+            m = Mock()
+            m.needs_any_tags.return_value = True
+            m.has_lookup_info.return_value = True
+            m.artist = "Artist"
+            m.album = "Album"
+            m.title = "Song"
+            m.needs_genre.return_value = True
+            m.needs_year.return_value = True
+            return m
+
+        mock_metadata_extractor_instance = Mock()
+        mock_metadata_extractor_instance.extract_metadata.side_effect = [
+            make_meta(),
+            make_meta(),
+        ]
+        mock_metadata_extractor.return_value = mock_metadata_extractor_instance
+
+        mock_processor = Mock()
+        mock_processor.add_missing_tags.return_value = ["genre", "year"]
+        mock_processor_class.return_value = mock_processor
+
+        mock_logger = Mock()
+        mock_logger_class.return_value = mock_logger
+
+        mb_instance = Mock()
+        mock_mb_client.return_value = mb_instance
+        mb_instance.get_metadata.return_value = Mock(genre="Rock", year="2000", has_genre=lambda: True, has_year=lambda: True)
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 0
+        # API should be called once for the album
+        mb_instance.get_metadata.assert_called_once()
+
 
 class TestDisplaySummary:
     """Test the display_summary function."""
