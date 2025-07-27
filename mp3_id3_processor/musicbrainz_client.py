@@ -49,31 +49,24 @@ class MusicBrainzClient:
             return None
 
         try:
-            logger.debug(f"Searching for: artist='{artist}', album='{album}', track='{track}'")
-            
-            # Step 1: Search for recordings to find the recording ID
+            logger.debug(
+                f"Searching for: artist='{artist}', album='{album}', track='{track}'"
+            )
+
+            # Perform a single search request for the recording.
             search_result = musicbrainzngs.search_recordings(
                 artist=artist,
                 release=album,
                 recording=track,
-                limit=1
+                limit=1,
             )
-            
+
             recordings = search_result.get("recording-list")
             if not recordings:
                 logger.debug("No recordings found in search")
                 return None
 
-            recording_id = recordings[0]["id"]
-            logger.debug(f"Found recording ID: {recording_id}")
-            
-            # Step 2: Get detailed recording information with tags and releases
-            recording_data = musicbrainzngs.get_recording_by_id(
-                recording_id,
-                includes=["tags", "releases"]
-            )
-            
-            recording = recording_data["recording"]
+            recording = recordings[0]
 
             # Extract genre from tags
             genre = None
@@ -105,47 +98,6 @@ class MusicBrainzClient:
                     year = earliest_date[:4]
                     logger.debug(f"Found year from release: {year}")
 
-            # If no genre found from recording tags, try to get it from release-group
-            if not genre:
-                release_list = recording.get("release-list", [])
-                for release in release_list:
-                    release_id = release.get("id")
-                    if release_id:
-                        try:
-                            # Get release with release-group information
-                            release_data = musicbrainzngs.get_release_by_id(
-                                release_id,
-                                includes=["release-groups"]
-                            )
-                            
-                            release_group = release_data.get("release", {}).get("release-group")
-                            if release_group:
-                                rg_id = release_group["id"]
-                                logger.debug(f"Getting tags for release-group: {rg_id}")
-                                
-                                # Get release group with tags
-                                rg_data = musicbrainzngs.get_release_group_by_id(
-                                    rg_id,
-                                    includes=["tags"]
-                                )
-                                
-                                rg_tags = rg_data.get("release-group", {}).get("tag-list", [])
-                                if rg_tags:
-                                    # Sort tags by count and take the most popular one
-                                    sorted_rg_tags = sorted(rg_tags, key=lambda x: int(x.get("count", 0)), reverse=True)
-                                    for tag in sorted_rg_tags:
-                                        if int(tag.get("count", 0)) > 0:
-                                            name = tag.get("name")
-                                            if name:
-                                                # Convert to title case for consistency
-                                                genre = name.title()
-                                                logger.debug(f"Found genre from release-group: {genre} (count: {tag.get('count')})")
-                                                break
-                                    if genre:
-                                        break
-                        except Exception as e:
-                            logger.debug(f"Error getting release-group tags: {e}")
-                            continue
 
             result = MusicBrainzMetadata(
                 artist=artist,

@@ -79,6 +79,12 @@ Examples:
     )
 
     parser.add_argument(
+        '--report-missing',
+        action='store_true',
+        help='With --dry-run, scan and report files missing genre or year'
+    )
+
+    parser.add_argument(
         '--genre',
         type=str,
         help='Override default genre to add to files'
@@ -198,11 +204,33 @@ def main():
         except ScannerError as e:
             print(f"Error scanning directory: {e}")
             sys.exit(1)
-        
+
         # Check if any MP3 files were found
         if not mp3_files:
             print(f"No MP3 files found in {music_dir}")
             print("Please check that the directory contains MP3 files")
+            sys.exit(0)
+
+        if args.dry_run and args.report_missing:
+            extractor = MetadataExtractor()
+            missing = {}
+            for fp in mp3_files:
+                meta = extractor.extract_metadata(fp)
+                if not meta:
+                    continue
+                missing_tags = []
+                if meta.needs_genre():
+                    missing_tags.append('genre')
+                if meta.needs_year():
+                    missing_tags.append('year')
+                if missing_tags:
+                    missing[fp] = missing_tags
+            if missing:
+                print("FILES MISSING TAGS:")
+                for p, tags in missing.items():
+                    print(f"  {p.name}: missing {', '.join(tags)}")
+            else:
+                print("All files have genre and year tags")
             sys.exit(0)
         
         # Initialize processing results
@@ -224,7 +252,7 @@ def main():
 
                 # Allow processor to handle file directly if genre/year are provided
                 direct_result = processor.process_file(file_path)
-                if direct_result is not None:
+                if isinstance(direct_result, ProcessingResult):
                     results.add_result(direct_result)
                     if direct_result.success:
                         logger.log_file_processing(file_path, direct_result.tags_added)
@@ -251,6 +279,12 @@ def main():
                         print(f"[{i}/{len(mp3_files)}] {file_path.name}: Already has genre")
                     result = ProcessingResult(file_path=file_path, success=True, tags_added=[])
                     results.add_result(result)
+                    missing = []
+                    if existing_metadata.needs_genre() and 'genre' not in result.tags_added:
+                        missing.append('genre')
+                    if existing_metadata.needs_year() and 'year' not in result.tags_added:
+                        missing.append('year')
+                    results.add_missing(file_path, missing)
                     continue
                 
                 # Try to get metadata from API if enabled
@@ -302,6 +336,12 @@ def main():
                         # Create mock result for statistics
                         result = ProcessingResult(file_path=file_path, success=True, tags_added=tags_to_add)
                         results.add_result(result)
+                        missing = []
+                        if existing_metadata.needs_genre() and 'genre' not in result.tags_added:
+                            missing.append('genre')
+                        if existing_metadata.needs_year() and 'year' not in result.tags_added:
+                            missing.append('year')
+                        results.add_missing(file_path, missing)
                     elif config.verbose:
                         if not existing_metadata.has_lookup_info():
                             print(f"No changes for: {file_path.name} (insufficient metadata for lookup)")
@@ -309,6 +349,12 @@ def main():
                             print(f"No changes for: {file_path.name} (no API data found)")
                         result = ProcessingResult(file_path=file_path, success=True, tags_added=[])
                         results.add_result(result)
+                        missing = []
+                        if existing_metadata.needs_genre():
+                            missing.append('genre')
+                        if existing_metadata.needs_year():
+                            missing.append('year')
+                        results.add_missing(file_path, missing)
                 else:
                     # Normal processing mode - actually modify files
                     if tags_to_add:
@@ -320,6 +366,12 @@ def main():
                             )
                             result = ProcessingResult(file_path=file_path, success=True, tags_added=added_tags)
                             results.add_result(result)
+                            missing = []
+                            if existing_metadata.needs_genre() and 'genre' not in result.tags_added:
+                                missing.append('genre')
+                            if existing_metadata.needs_year() and 'year' not in result.tags_added:
+                                missing.append('year')
+                            results.add_missing(file_path, missing)
                             logger.log_file_processing(file_path, added_tags)
                         else:
                             error_result = ProcessingResult(
@@ -328,11 +380,23 @@ def main():
                                 error_message="Could not load MP3 file for modification"
                             )
                             results.add_result(error_result)
+                            miss = []
+                            if existing_metadata.needs_genre():
+                                miss.append('genre')
+                            if existing_metadata.needs_year():
+                                miss.append('year')
+                            results.add_missing(file_path, miss)
                             logger.log_error(file_path, Exception("Could not load MP3 file"))
                     else:
                         # No tags to add
                         result = ProcessingResult(file_path=file_path, success=True, tags_added=[])
                         results.add_result(result)
+                        missing = []
+                        if existing_metadata.needs_genre():
+                            missing.append('genre')
+                        if existing_metadata.needs_year():
+                            missing.append('year')
+                        results.add_missing(file_path, missing)
                         if config.verbose:
                             if not existing_metadata.has_lookup_info():
                                 logger.log_info(f"{file_path.name}: Insufficient metadata for lookup")

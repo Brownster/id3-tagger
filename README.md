@@ -107,6 +107,7 @@ mp3-id3-processor --config config.json --verbose
 | `--config`, `-c` | Path to configuration file (JSON format) |
 | `--verbose`, `-v` | Enable verbose output showing detailed progress |
 | `--dry-run` | Show what would be done without making any changes |
+| `--report-missing` | With `--dry-run`, report files missing genre or year |
 | `--help`, `-h` | Show help message and exit |
 
 ## Configuration
