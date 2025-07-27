@@ -250,8 +250,8 @@ def main():
         # Start processing
         logger.log_start(len(mp3_files))
 
-        # Cache API results per album directory to minimize API calls
-        album_cache: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
+        # Remove album caching to ensure accurate metadata for various artist albums
+        # Each track will get its own API lookup for proper genre/year detection
         
         if args.dry_run:
             print("DRY RUN MODE - No files will be modified")
@@ -305,11 +305,7 @@ def main():
                 api_genre = None
                 api_year = None
 
-                album_key = str(file_path.parent)
-                cached = album_cache.get(album_key)
-                if cached is not None:
-                    api_genre, api_year = cached
-                elif (
+                if (
                     config.use_api
                     and musicbrainz_client
                     and existing_metadata.has_lookup_info()
@@ -329,12 +325,7 @@ def main():
                             if mb_metadata.has_year():
                                 api_year = mb_metadata.year
                     except Exception as e:
-                        logger.log_warning(
-                            f"MusicBrainz lookup failed for {file_path.name}: {e}"
-                        )
-                    album_cache[album_key] = (api_genre, api_year)
-                if album_key not in album_cache:
-                    album_cache[album_key] = (api_genre, api_year)
+                        logger.log_warning(f"MusicBrainz lookup failed for {file_path.name}: {e}")
 
                 
                 # Determine what tags we can add
