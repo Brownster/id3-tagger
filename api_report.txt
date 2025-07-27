@@ -1,5 +1,0 @@
-PROCESSING SUMMARY
-===================
-Total files found: 2
-Files processed: 2
-Files modified: 0
