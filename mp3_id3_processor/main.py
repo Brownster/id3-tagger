@@ -222,6 +222,16 @@ def main():
                 if len(mp3_files) > 10 and config.verbose:
                     logger.log_progress_update(i, len(mp3_files), file_path.name)
 
+                # Allow processor to handle file directly if implemented
+                direct_result = processor.process_file(file_path)
+                if isinstance(direct_result, ProcessingResult):
+                    results.add_result(direct_result)
+                    if direct_result.success:
+                        logger.log_file_processing(file_path, direct_result.tags_added)
+                    else:
+                        logger.log_error(file_path, Exception(direct_result.error_message or "Processing failed"))
+                    continue
+
                 # Extract existing metadata
                 existing_metadata = metadata_extractor.extract_metadata(file_path)
                 if not existing_metadata:
@@ -245,6 +255,7 @@ def main():
                 
                 # Try to get metadata from API if enabled
                 api_genre = None
+                api_year = None
 
                 if (
                     config.use_api
@@ -255,13 +266,16 @@ def main():
                     and existing_metadata.title
                 ):
                     try:
-                        mb_metadata = musicbrainz_client.get_genre(
+                        mb_metadata = musicbrainz_client.get_metadata(
                             existing_metadata.artist,
                             existing_metadata.album,
                             existing_metadata.title,
                         )
-                        if mb_metadata and mb_metadata.has_genre():
-                            api_genre = mb_metadata.genre
+                        if mb_metadata:
+                            if mb_metadata.has_genre():
+                                api_genre = mb_metadata.genre
+                            if mb_metadata.has_year():
+                                api_year = mb_metadata.year
                     except Exception as e:
                         logger.log_warning(f"MusicBrainz lookup failed for {file_path.name}: {e}")
 
@@ -270,13 +284,20 @@ def main():
                 tags_to_add = []
                 if api_genre and existing_metadata.needs_genre():
                     tags_to_add.append('genre')
+                if api_year and existing_metadata.needs_year():
+                    tags_to_add.append('year')
                 
                 if args.dry_run:
                     # In dry run mode, just show what would be done
                     if tags_to_add:
                         tags_str = ", ".join(tags_to_add)
-                        genre_info = f" (genre: {api_genre})" if api_genre else ""
-                        print(f"Would add {tags_str} to: {file_path.name}{genre_info}")
+                        details = []
+                        if api_genre:
+                            details.append(f"genre: {api_genre}")
+                        if api_year:
+                            details.append(f"year: {api_year}")
+                        detail_str = f" ({'; '.join(details)})" if details else ""
+                        print(f"Would add {tags_str} to: {file_path.name}{detail_str}")
                         
                         # Create mock result for statistics
                         result = ProcessingResult(file_path=file_path, success=True, tags_added=tags_to_add)
@@ -294,7 +315,9 @@ def main():
                         # Load the MP3 file for modification
                         audio_file = processor._load_mp3_file(file_path)
                         if audio_file:
-                            added_tags = processor.add_missing_tags(audio_file, file_path, api_genre, None)
+                            added_tags = processor.add_missing_tags(
+                                audio_file, file_path, api_genre, api_year
+                            )
                             result = ProcessingResult(file_path=file_path, success=True, tags_added=added_tags)
                             results.add_result(result)
                             logger.log_file_processing(file_path, added_tags)

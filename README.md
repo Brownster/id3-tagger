@@ -1,12 +1,12 @@
 # MP3 ID3 Processor
 
-A simple command-line tool that automatically adds missing genre ID3 tag to MP3 files in your music collection without modifying existing metadata.
+A simple command-line tool that automatically adds missing genre and year ID3 tags to MP3 files in your music collection without modifying existing metadata.
 
 ## Features
 
 - **Safe and Non-destructive**: Preserves all existing ID3 tags and metadata
 - **Automatic Discovery**: Recursively scans your music directory for MP3 files
-- **API Integration**: Uses the MusicBrainz API to lookup missing genre information
+- **API Integration**: Uses the MusicBrainz API to lookup missing genre and year information
 - **Configurable Defaults**: Set custom default values for missing tags
 - **Comprehensive Logging**: Detailed progress reporting and error handling
 - **Dry Run Mode**: Preview changes before applying them
@@ -140,17 +140,18 @@ Create a JSON configuration file to customize default behavior:
 ## How It Works
 
 1. **Scanning**: Recursively scans the specified directory for MP3 files
-2. **Analysis**: Examines each MP3 file to identify missing genre tags
-3. **API Lookup**: Uses the MusicBrainz API to find missing genre information based on existing tags
+2. **Analysis**: Examines each MP3 file to identify missing genre and year tags
+3. **API Lookup**: Uses the MusicBrainz API to find missing genre and year information based on existing tags
 4. **Safe Modification**: Adds only missing tags while preserving all existing metadata
 5. **Reporting**: Provides detailed summary of all changes made
 
 ## API Integration
 
-The application uses the MusicBrainz API to lookup missing genre information:
+The application uses the MusicBrainz API to lookup missing genre and year information:
 
 - Searches recordings by artist, album, and track title
 - Returns the most popular genre tag found for the recording
+- Retrieves the release year when available
 
 ## Safety Features
 
@@ -167,8 +168,8 @@ The application uses the MusicBrainz API to lookup missing genre information:
 Starting MP3 ID3 processing...
 Found 150 MP3 files to process
 
-[1/150] song1.mp3: Added genre (Rock)
-[2/150] song2.mp3: Already had genre
+[1/150] song1.mp3: Added genre (Rock) and year (1999)
+[2/150] song2.mp3: Already had genre and year
 [3/150] song3.mp3: Added genre (Pop)
 [4/150] song4.mp3: Already has all tags
 ...
@@ -187,8 +188,8 @@ Processing completed successfully!
 ```
 DRY RUN MODE - No files will be modified
 --------------------------------------------------
-Would add genre to: song1.mp3 (genre: Rock)
-No changes for: song2.mp3 (already has genre)
+Would add genre and year to: song1.mp3 (genre: Rock, year: 1999)
+No changes for: song2.mp3 (already has genre and year)
 Would add genre to: song3.mp3 (genre: Pop)
 No changes for: song4.mp3 (already has all tags)
 ...
@@ -200,6 +201,7 @@ Total files found: 150
 Files that would be modified: 45
 Tags that would be added:
   genre: 25 files
+  year: 20 files
 ==================================================
 ```
 
