@@ -27,7 +27,7 @@ class ID3Processor:
         file_path: Path,
         genre: Optional[str] = None,
         year: Optional[str] = None,
-    ) -> ProcessingResult:
+    ) -> Optional[ProcessingResult]:
         """Process a single MP3 file to add missing tags.
 
         Tags are only written if valid values are provided via the ``genre``
@@ -36,10 +36,18 @@ class ID3Processor:
 
         Args:
             file_path: Path to the MP3 file to process.
+            genre: Genre to add if missing (if None, no genre will be added)
+            year: Year to add if missing (if None, no year will be added)
 
         Returns:
-            ProcessingResult with details of the processing outcome.
+            ProcessingResult with details of the processing outcome, or None
+            if no genre/year were provided (indicating the caller should handle API lookup).
         """
+        # If no genre or year provided, return None to indicate the caller
+        # should handle metadata extraction and API lookup
+        if genre is None and year is None:
+            return None
+            
         try:
             # Load the MP3 file
             audio_file = self._load_mp3_file(file_path)

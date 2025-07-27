@@ -222,9 +222,9 @@ def main():
                 if len(mp3_files) > 10 and config.verbose:
                     logger.log_progress_update(i, len(mp3_files), file_path.name)
 
-                # Allow processor to handle file directly if implemented
+                # Allow processor to handle file directly if genre/year are provided
                 direct_result = processor.process_file(file_path)
-                if isinstance(direct_result, ProcessingResult):
+                if direct_result is not None:
                     results.add_result(direct_result)
                     if direct_result.success:
                         logger.log_file_processing(file_path, direct_result.tags_added)
