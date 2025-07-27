@@ -7,7 +7,7 @@ A simple command-line tool that automatically adds missing genre and year ID3 ta
 - **Safe and Non-destructive**: Preserves all existing ID3 tags and metadata
 - **Automatic Discovery**: Recursively scans your music directory for MP3 files
 - **API Integration**: Uses the MusicBrainz API to lookup missing genre and year information
-- **Configurable Defaults**: Set custom default values for missing tags
+- **API Server Mode**: HTTP REST API for integration with other applications
 - **Comprehensive Logging**: Detailed progress reporting and error handling
 - **Dry Run Mode**: Preview changes before applying them
 - **Flexible Configuration**: Command-line options and JSON configuration files
@@ -96,6 +96,106 @@ mp3-id3-processor --directory /media/music --dry-run --verbose
 mp3-id3-processor --config config.json --verbose
 ```
 
+## API Server Mode
+
+The application can run as an HTTP API server for integration with other applications that create MP3 files and want to automatically add missing ID3 metadata.
+
+### Starting the API Server
+
+```bash
+# Start API server on default port (5000)
+mp3-id3-processor --api-mode
+
+# Start with verbose logging
+mp3-id3-processor --api-mode --verbose
+```
+
+The server will start on `http://localhost:5000` by default.
+
+### API Endpoints
+
+#### Process Directory
+**POST** `/process_directory`
+
+Processes all MP3 files in a specified directory and adds missing genre and year tags.
+
+**Request:**
+```json
+{
+    "directory": "/path/to/mp3/files"
+}
+```
+
+**Response:**
+```json
+{
+    "processed": 15,
+    "report": "api_report.txt"
+}
+```
+
+#### Process Playlist
+**POST** `/process_playlist`
+
+Processes MP3 files listed in an M3U playlist file.
+
+**Request:**
+```json
+{
+    "m3u_path": "/path/to/playlist.m3u",
+    "music_directory": "/optional/base/path"
+}
+```
+
+**Response:**
+```json
+{
+    "processed": 10,
+    "report": "api_report.txt"
+}
+```
+
+### API Usage Examples
+
+```bash
+# Process a directory via API
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"directory": "/path/to/music"}' \
+     http://localhost:5000/process_directory
+
+# Process a playlist via API
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"m3u_path": "/path/to/playlist.m3u"}' \
+     http://localhost:5000/process_playlist
+```
+
+### Integration with Other Applications
+
+The API server is designed for integration with applications that create MP3 files. For comprehensive integration documentation including code examples, error handling, and best practices, see [DEVELOPER_INTEGRATION.md](DEVELOPER_INTEGRATION.md).
+
+**Basic Integration Example:**
+```python
+import requests
+
+def add_missing_tags(output_directory):
+    url = "http://localhost:5000/process_directory"
+    payload = {"directory": output_directory}
+    
+    response = requests.post(url, 
+                           headers={"Content-Type": "application/json"},
+                           json=payload,
+                           timeout=300)
+    
+    if response.status_code == 200:
+        result = response.json()
+        print(f"Successfully processed {result['processed']} files")
+        return True
+    else:
+        error = response.json()
+        print(f"Error: {error['error']}")
+        return False
+```
+
 ## Command-Line Options
 
 | Option | Description |
@@ -108,6 +208,7 @@ mp3-id3-processor --config config.json --verbose
 | `--verbose`, `-v` | Enable verbose output showing detailed progress |
 | `--dry-run` | Show what would be done without making any changes |
 | `--report-missing` | With `--dry-run`, report files missing genre or year |
+| `--api-mode` | Start HTTP API server for integration with other applications |
 | `--help`, `-h` | Show help message and exit |
 
 ## Configuration
@@ -118,7 +219,6 @@ Create a JSON configuration file to customize default behavior:
 
 ```json
 {
-  "default_genre": "Unknown",
   "music_directory": "~/Music",
   "use_api": true,
   "api_timeout": 10.0,
@@ -130,13 +230,14 @@ Create a JSON configuration file to customize default behavior:
 
 ### Configuration Options
 
-- **default_genre**: Default genre to use when API lookup fails
 - **music_directory**: Directory to scan for MP3 files
-- **use_api**: Enable/disable API lookups
+- **use_api**: Enable/disable MusicBrainz API lookups
 - **api_timeout**: Timeout for API requests in seconds
-- **api_request_delay**: Delay between API requests in seconds
+- **api_request_delay**: Delay between API requests in seconds (MusicBrainz requires 1 req/sec)
 - **api_cache_dir**: Directory for caching API responses
 - **verbose**: Enable verbose logging
+
+**Note**: The application only adds tags found via MusicBrainz API - no default values are used.
 
 ## How It Works
 
