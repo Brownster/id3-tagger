@@ -120,6 +120,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = False
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
         
         mock_config = Mock()
@@ -176,6 +177,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = False
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
         
         mock_config = Mock()
@@ -202,6 +204,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = False
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
         
         mock_config = Mock()
@@ -240,6 +243,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = True  # Enable dry-run mode
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
         
         mock_config = Mock()
@@ -301,6 +305,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = False
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
         
         mock_config = Mock()
@@ -339,6 +344,7 @@ class TestMainFunction:
         mock_args.directory = None
         mock_args.verbose = False
         mock_args.dry_run = False
+        mock_args.api_mode = False
         mock_parse_args.return_value = mock_args
 
         mock_config = Mock()

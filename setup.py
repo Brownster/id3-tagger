@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="mp3-id3-processor",
-    version="1.0.0",
+    version="1.1.0",
     author="MP3 ID3 Processor",
     description="Automatically add missing genre and year ID3 tags to MP3 files",
     long_description="A simple command-line tool that scans MP3 files in the ~/Music directory and adds missing genre and year ID3 tags without modifying existing metadata.",
