@@ -110,6 +110,7 @@ class ConfigurationSchema:
     api_request_delay: float = 0.5
     default_genre: Optional[str] = None
     default_year: Optional[str] = None
+    original_release_date: bool = True
 
     def __post_init__(self):
         """Validate configuration values after initialization."""
@@ -150,6 +151,9 @@ class ConfigurationSchema:
                 raise ValueError(
                     f"default_year must be between 1900 and {current_year + 10}"
                 )
+        
+        if not isinstance(self.original_release_date, bool):
+            raise ValueError("original_release_date must be a boolean")
 
     def get_music_directory_path(self) -> Path:
         """Get the music directory as a Path object with expansion."""

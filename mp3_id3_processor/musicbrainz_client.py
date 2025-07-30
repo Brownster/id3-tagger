@@ -31,11 +31,21 @@ class MusicBrainzClient:
         app_name: str = "mp3-id3-processor",
         app_version: str = "1.0",
         contact: Optional[str] = "https://example.com",
+        use_original_release_date: bool = True,
     ):
-        """Initialize the client and configure request settings."""
+        """Initialize the client and configure request settings.
+        
+        Args:
+            app_name: Application name for MusicBrainz user agent.
+            app_version: Application version for MusicBrainz user agent.
+            contact: Contact information for MusicBrainz user agent.
+            use_original_release_date: If True, prefer original release dates from 
+                release-groups. If False, use earliest release date from any release.
+        """
         self.app_name = app_name
         self.app_version = app_version
         self.contact = contact or "https://example.com"
+        self.use_original_release_date = use_original_release_date
 
         musicbrainzngs.set_useragent(self.app_name, self.app_version, self.contact)
         # Follow MusicBrainz guidelines: limit one request per second
@@ -89,21 +99,15 @@ class MusicBrainzClient:
                             logger.debug(f"Found genre from tag: {genre}")
                             break
 
-            # Extract year from release dates
+            # Extract year using the configured approach
             year = None
-            release_list = recording.get("release-list", [])
-            if release_list:
-                # Look for the earliest release date
-                earliest_date = None
-                for release in release_list:
-                    date_str = release.get("date")
-                    if date_str and len(date_str) >= 4 and date_str[:4].isdigit():
-                        if not earliest_date or date_str < earliest_date:
-                            earliest_date = date_str
-                
-                if earliest_date:
-                    year = earliest_date[:4]
-                    logger.debug(f"Found year from release: {year}")
+            if self.use_original_release_date:
+                year = self._get_original_release_year(recording)
+            else:
+                year = self._get_earliest_release_year(recording)
+            
+            if year:
+                logger.debug(f"Found year: {year} (using {'original' if self.use_original_release_date else 'earliest'} release date approach)")
 
             # If no genre found from recording tags, try to get it from release-group
             if not genre:
@@ -170,3 +174,90 @@ class MusicBrainzClient:
         if metadata and metadata.genre:
             return metadata
         return None
+
+    def _get_earliest_release_year(self, recording: dict) -> Optional[str]:
+        """Get the earliest release year from any release (current behavior).
+        
+        Args:
+            recording: Recording data from MusicBrainz.
+            
+        Returns:
+            Year string if found, None otherwise.
+        """
+        release_list = recording.get("release-list", [])
+        if not release_list:
+            return None
+        
+        earliest_date = None
+        for release in release_list:
+            date_str = release.get("date")
+            if date_str and len(date_str) >= 4 and date_str[:4].isdigit():
+                if not earliest_date or date_str < earliest_date:
+                    earliest_date = date_str
+        
+        return earliest_date[:4] if earliest_date else None
+
+    def _get_original_release_year(self, recording: dict) -> Optional[str]:
+        """Get the original release year from release-groups (new behavior).
+        
+        Args:
+            recording: Recording data from MusicBrainz.
+            
+        Returns:
+            Year string if found, None otherwise.
+        """
+        release_list = recording.get("release-list", [])
+        if not release_list:
+            return None
+        
+        # Collect unique release-group IDs by getting release details
+        release_group_ids = set()
+        for release in release_list[:5]:  # Limit to first 5 releases to avoid too many API calls
+            release_id = release.get("id")
+            if release_id:
+                try:
+                    # Get release details with release-group information
+                    release_data = musicbrainzngs.get_release_by_id(
+                        release_id,
+                        includes=["release-groups"]
+                    )
+                    
+                    release_info = release_data["release"]
+                    release_group = release_info.get("release-group")
+                    if release_group:
+                        rg_id = release_group.get("id")
+                        if rg_id:
+                            release_group_ids.add(rg_id)
+                            logger.debug(f"Found release-group {rg_id} from release {release_id}")
+                    
+                except Exception as e:
+                    logger.debug(f"Error getting release {release_id}: {e}")
+                    continue
+        
+        if not release_group_ids:
+            logger.debug("No release-groups found, falling back to earliest release date")
+            return self._get_earliest_release_year(recording)
+        
+        # Get first-release-date from each release-group
+        earliest_first_release = None
+        for rg_id in release_group_ids:
+            try:
+                rg_data = musicbrainzngs.get_release_group_by_id(rg_id)
+                rg_info = rg_data["release-group"]
+                first_release_date = rg_info.get("first-release-date")
+                
+                if first_release_date and len(first_release_date) >= 4:
+                    if not earliest_first_release or first_release_date < earliest_first_release:
+                        earliest_first_release = first_release_date
+                        
+                logger.debug(f"Release-group {rg_id}: first-release-date = {first_release_date}")
+                        
+            except Exception as e:
+                logger.debug(f"Error getting release-group {rg_id}: {e}")
+                continue
+        
+        if earliest_first_release:
+            return earliest_first_release[:4]
+        else:
+            logger.debug("No release-group dates found, falling back to earliest release date")
+            return self._get_earliest_release_year(recording)

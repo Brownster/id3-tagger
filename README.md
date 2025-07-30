@@ -209,6 +209,7 @@ def add_missing_tags(output_directory):
 | `--dry-run` | Show what would be done without making any changes |
 | `--report-missing` | With `--dry-run`, report files missing genre or year |
 | `--api-mode` | Start HTTP API server for integration with other applications |
+| `--use-reissue-date` | Use actual reissue/remaster release dates instead of original release dates |
 | `--help`, `-h` | Show help message and exit |
 
 ## Configuration
@@ -224,7 +225,8 @@ Create a JSON configuration file to customize default behavior:
   "api_timeout": 10.0,
   "api_request_delay": 1.0,
   "api_cache_dir": null,
-  "verbose": false
+  "verbose": false,
+  "original_release_date": true
 }
 ```
 
@@ -236,6 +238,7 @@ Create a JSON configuration file to customize default behavior:
 - **api_request_delay**: Delay between API requests in seconds (MusicBrainz requires 1 req/sec)
 - **api_cache_dir**: Directory for caching API responses
 - **verbose**: Enable verbose logging
+- **original_release_date**: Use original release dates from release-groups instead of reissue dates (default: true)
 
 **Note**: The application only adds tags found via MusicBrainz API - no default values are used.
 

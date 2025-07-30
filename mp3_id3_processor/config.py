@@ -58,6 +58,7 @@ class Configuration:
         api_request_delay = config_data.get('api_request_delay', 0.5)
         default_genre = config_data.get('default_genre', None)
         default_year = config_data.get('default_year', None)
+        original_release_date = config_data.get('original_release_date', True)
         
         return ConfigurationSchema(
             music_directory=music_directory,
@@ -68,7 +69,8 @@ class Configuration:
             api_cache_dir=api_cache_dir,
             api_request_delay=api_request_delay,
             default_genre=default_genre,
-            default_year=default_year
+            default_year=default_year,
+            original_release_date=original_release_date
         )
     
     @property
@@ -116,6 +118,11 @@ class Configuration:
         """Get default year setting."""
         return self._schema.default_year
     
+    @property
+    def original_release_date(self) -> bool:
+        """Get original release date preference setting."""
+        return self._schema.original_release_date
+    
     def validate(self) -> bool:
         """Validate current configuration.
         
@@ -156,7 +163,8 @@ class Configuration:
                 'api_cache_dir': self.api_cache_dir,
                 'api_request_delay': self.api_request_delay,
                 'default_genre': self.default_genre,
-                'default_year': self.default_year
+                'default_year': self.default_year,
+                'original_release_date': self.original_release_date
             }
             
             # Ensure parent directory exists
@@ -197,7 +205,8 @@ class Configuration:
                 'api_cache_dir': self.api_cache_dir,
                 'api_request_delay': self.api_request_delay,
                 'default_genre': self.default_genre,
-                'default_year': self.default_year
+                'default_year': self.default_year,
+                'original_release_date': self.original_release_date
             }
             
             # Apply updates

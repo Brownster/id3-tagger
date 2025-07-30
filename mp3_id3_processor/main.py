@@ -95,6 +95,12 @@ Examples:
         action='store_true',
         help='Start a simple HTTP API server instead of processing once'
     )
+    
+    parser.add_argument(
+        '--use-reissue-date',
+        action='store_true',
+        help='Use actual reissue/remaster release dates instead of original release dates (default: use original dates)'
+    )
 
     
     return parser.parse_args()
@@ -169,6 +175,8 @@ def main():
             config_updates['verbose'] = True
         if args.genre:
             config_updates['default_genre'] = args.genre
+        if args.use_reissue_date:
+            config_updates['original_release_date'] = False
         
         if config_updates:
             if not config.update_from_dict(config_updates):
@@ -194,13 +202,17 @@ def main():
         metadata_extractor = MetadataExtractor()
         musicbrainz_client = None
         if config.use_api:
-            musicbrainz_client = MusicBrainzClient()
+            musicbrainz_client = MusicBrainzClient(
+                use_original_release_date=config.original_release_date
+            )
         
         # Display startup information
         if config.verbose:
             print(f"Configuration:")
             print(f"  Music directory: {music_dir}")
             print(f"  API lookups: {'enabled' if config.use_api else 'disabled'}")
+            if config.use_api:
+                print(f"  Release date preference: {'original' if config.original_release_date else 'reissue/actual'}")
             print(f"  Verbose mode: {config.verbose}")
             if args.dry_run:
                 print(f"  Dry run mode: enabled")
