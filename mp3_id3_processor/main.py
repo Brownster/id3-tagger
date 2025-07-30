@@ -276,15 +276,18 @@ def main():
                 if len(mp3_files) > 10 and config.verbose:
                     logger.log_progress_update(i, len(mp3_files), file_path.name)
 
-                # Allow processor to handle file directly if genre/year are provided
-                direct_result = processor.process_file(file_path)
-                if isinstance(direct_result, ProcessingResult):
-                    results.add_result(direct_result)
-                    if direct_result.success:
-                        logger.log_file_processing(file_path, direct_result.tags_added)
-                    else:
-                        logger.log_error(file_path, Exception(direct_result.error_message or "Processing failed"))
-                    continue
+                # Allow processor to handle file directly if default genre/year are provided
+                default_genre = config.default_genre
+                default_year = config.default_year
+                if default_genre or default_year:
+                    direct_result = processor.process_file(file_path, genre=default_genre, year=default_year)
+                    if isinstance(direct_result, ProcessingResult):
+                        results.add_result(direct_result)
+                        if direct_result.success:
+                            logger.log_file_processing(file_path, direct_result.tags_added)
+                        else:
+                            logger.log_error(file_path, Exception(direct_result.error_message or "Processing failed"))
+                        continue
 
                 # Extract existing metadata
                 existing_metadata = metadata_extractor.extract_metadata(file_path)
@@ -299,18 +302,12 @@ def main():
                     logger.log_error(file_path, Exception("Could not extract metadata"))
                     continue
                 
-                # Skip files that already have a genre tag
-                if not existing_metadata.needs_genre():
+                # Skip files that already have both genre and year tags
+                if not existing_metadata.needs_genre() and not existing_metadata.needs_year():
                     if config.verbose:
-                        print(f"[{i}/{len(mp3_files)}] {file_path.name}: Already has genre")
+                        print(f"[{i}/{len(mp3_files)}] {file_path.name}: Already has genre and year")
                     result = ProcessingResult(file_path=file_path, success=True, tags_added=[])
                     results.add_result(result)
-                    missing = []
-                    if existing_metadata.needs_genre() and 'genre' not in result.tags_added:
-                        missing.append('genre')
-                    if existing_metadata.needs_year() and 'year' not in result.tags_added:
-                        missing.append('year')
-                    results.add_missing(file_path, missing)
                     continue
                 
                 # Try to get metadata from API if enabled
